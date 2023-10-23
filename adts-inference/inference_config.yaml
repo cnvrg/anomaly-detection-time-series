@@ -1,0 +1,15 @@
+preprocess_lib: /input/preprocessing
+comparison_lib: /input/model_comparison
+train_valid_lib: /input/train_valid_split
+column_csv_path: /input/preprocessing/column_names.csv
+categorical_csv_path: /input/preprocessing/categorical_column_names.csv
+categorical_modes_path: /input/preprocessing/categorical_modes.csv
+column_names_csv: column_names.csv
+categorical_names_csv: categorical_column_names.csv
+categorical_modes_csv: categorical_modes.csv
+imputer_file_name: _imputer.pkl
+encoder_file_name: _encoder.pkl
+deepmodel_dir: model
+model_file: model.pkl
+winner_csv: winner_details.csv
+scaler_file: train_scaler.pkl

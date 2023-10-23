@@ -1,0 +1,3 @@
+cnvrgv2
+pandas
+influxdb-client

@@ -1,0 +1,14 @@
+# cfg file for configuring connector test drivers
+test_arguments:
+  token: "aSccp32TgHYEOV0Ztt1ZeuyCHSs0-rlVBxmRTX69dsD5yO7_Bxj4CXnz4DSX0iKgzaTTaJC8jdH8iMaOEZy5Gw=="
+  url: "https://us-east-1-1.aws.cloud2.influxdata.com"
+  org: "kris1.pan@intel.com"
+  bucket: "test"
+  measurement: "t2"
+  time_col: "date"
+  range_start: "-10y"
+  range_end: "now()"
+  cnvrg_dataset: "none"
+  file_dir: "test.csv"
+  file_dir: "sample_dataset/DailyDelhiClimateMissing.csv"
+

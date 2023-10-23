@@ -1,0 +1,3 @@
+column_csv: /input/preprocessing/column_names.csv
+categorical_csv: /input/preprocessing/categorical_column_names.csv
+scaler_file: /input/train_valid_split/train_scaler.pkl

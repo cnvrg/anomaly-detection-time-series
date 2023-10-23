@@ -1,0 +1,551 @@
+---
+title: S3 ADTS Training # Required on creation, replaces the "flow" parameter
+version: 1.0.0 # Required
+description: "Train anomaly detection models and make predictions on time-series data pulled from Amazon S3" # Optional for showing summary on UI
+long_description: "This blueprint enables the user to pull time-series data from S3, train multiple anomaly detection models and perform inference"
+
+# Optional properties for crediting authors
+author: "cnvrg"
+author_email: "libhub@cnvrg.io"
+
+# At least one tag [inference, training, data] must be present
+tags:
+  - training
+  - Predictive Maintenance
+
+# List of tasks (libraries)
+tasks:
+  - title: S3 Data Connector
+    top: 400
+    left: 100
+
+    # Type must be according to the flow task conventions (data, exec, deploy)
+    type: exec
+
+    # The library data
+    library: s3-connector
+    library_version: 1.0.0
+
+    # The flattened library parameters (in this case we have training library)
+    command: python s3-connector.py
+
+    requirements:
+      cpu: 3.5
+      memory: 7.5
+      gpu: 0
+      hpu: 0
+ 
+    computes:
+    - networkai-inteldev.inteldev-cloud-large
+
+    image: cnvrg:v5.0
+    language: python3
+
+    # The "arguments" property changes to "params", rest remains the same.
+    # Params in the blueprint yaml can be used to override the arguments in the library.
+    params:
+      - key: endpoint
+        type: 'categorical'
+        values:
+          - 'http://s3.amazonaws.com download'
+      - key: bucketname
+        type: 'categorical'
+        values: ['libhub-readme']
+      - key: localdir
+        type: 'categorical'
+        values:
+          - '/cnvrg'
+      - key: prefix
+        type: 'categorical'
+        values: ['adts_data/test.csv']
+
+  - title: Preprocessing
+    top: 400
+    left: 300
+
+    # Type must be according to the flow task conventions (data, exec, deploy)
+    type: exec
+
+    # The library data
+    library: adts-preprocess
+    library_version: 1.0.0
+
+    # The flattened library parameters (in this case we have training library)
+    command: python preprocess.py
+
+    requirements:
+      cpu: 3.5
+      memory: 7.5
+      gpu: 0
+      hpu: 0
+
+    computes:
+    - networkai-inteldev.inteldev-cloud-large
+
+    image: python:3.8
+    language: python3
+
+    # The "arguments" property changes to "params", rest remains the same.
+    # Params in the blueprint yaml can be used to override the arguments in the library.
+    params:
+      - key: dataset_path
+        type: categorical
+        values:
+          - "/input/s3_data_connector/adts_data/test.csv"
+      - key: timestamp_column
+        type: categorical
+        values:
+          - 'datetime'
+      - key: sensordata_columns
+        type: categorical
+        values:
+          - "Current,Voltage,Temperature,Pressure"
+      - key: label_column
+        type: discrete
+        values:
+          - "anomaly"
+      - key: imputation
+        type: categorical
+        values:
+          - "1!1!1!1"
+      - key: categorical_columns
+        type: categorical
+        values:
+          - "status"
+      - key: positive_label
+        type: categorical
+        values:
+          - '1'
+      - key: negative_label
+        type: categorical
+        values:
+          - '0'
+
+  - title: Train-Valid Split
+    top: 400
+    left: 500
+
+    # Type must be according to the flow task conventions (data, exec, deploy)
+    type: exec
+
+    # The library data
+    library: adts-train-valid-split
+    library_version: 1.0.0
+
+    # The flattened library parameters (in this case we have training library)
+    command: python tvsplit.py
+
+    requirements:
+      cpu: 3.5
+      memory: 7.5
+      gpu: 0
+      hpu: 0
+
+    computes:
+    - networkai-inteldev.inteldev-cloud-large
+
+    image: python:3.8
+    language: python3
+
+    # The "arguments" property changes to "params", rest remains the same.
+    # Params in the blueprint yaml can be used to override the arguments in the library.
+    params:
+      - key: dataset_path
+        type: categorical
+        values:
+          - '/input/preprocessing/preprocessed.csv'
+      - key: valid_size
+        type: categorical
+        values:
+          - '0.3'
+
+  - title: AutoEncoder
+    top: 200
+    left: 800
+
+    # Type must be according to the flow task conventions (data, exec, deploy)
+    type: exec
+
+    # The library data
+    library: adts-autoencoder
+    library_version: 1.0.0
+
+    # The flattened library parameters (in this case we have training library)
+    command: python autoencoder.py
+
+    requirements:
+      cpu: 3.5
+      memory: 7.5
+      gpu: 0
+      hpu: 0
+
+    computes:
+    - networkai-inteldev.inteldev-cloud-large
+
+    image: python:3.8
+    language: python3
+
+    # The "arguments" property changes to "params", rest remains the same.
+    # Params in the blueprint yaml can be used to override the arguments in the library.
+    params:
+      - key: train_path
+        type: categorical
+        values:
+          - '/input/train_valid_split/train.csv'
+      - key: valid_path
+        type: categorical
+        values:
+          - '/input/train_valid_split/valid.csv'
+      - key: dropout
+        type: discrete
+        values:
+          - '0.2'
+      - key: l2_reg
+        type: discrete
+        values:
+          - '0.1'
+      - key: positive_label
+        type: categorical
+        values:
+          - '1'
+      - key: negative_label
+        type: categorical
+        values:
+          - '0'
+
+  - title: KNN
+    top: 300
+    left: 800
+
+    # Type must be according to the flow task conventions (data, exec, deploy)
+    type: exec
+
+    # The library data
+    library: adts-knn
+    library_version: 1.0.0
+
+    # The flattened library parameters (in this case we have training library)
+    command: python knn.py
+
+    requirements:
+      cpu: 3.5
+      memory: 7.5
+      gpu: 0
+      hpu: 0
+
+    computes:
+    - networkai-inteldev.inteldev-cloud-large
+
+    image: python:3.8
+    language: python3
+
+    # The "arguments" property changes to "params", rest remains the same.
+    # Params in the blueprint yaml can be used to override the arguments in the library.
+    params:
+      - key: train_path
+        type: categorical
+        values:
+          - '/input/train_valid_split/train.csv'
+      - key: valid_path
+        type: categorical
+        values:
+          - '/input/train_valid_split/valid.csv'
+      - key: num_neighbors
+        type: discrete
+        values:
+          - '3'
+      - key: knn_radius
+        type: discrete
+        values:
+          - '1'
+      - key: positive_label
+        type: categorical
+        values:
+          - '1'
+      - key: negative_label
+        type: categorical
+        values:
+          - '0'
+
+  - title: IForest
+    top: 500
+    left: 800
+
+    # Type must be according to the flow task conventions (data, exec, deploy)
+    type: exec
+
+    # The library data
+    library: adts-iforest
+    library_version: 1.0.0
+
+    # The flattened library parameters (in this case we have training library)
+    command: python iforest.py
+
+    requirements:
+      cpu: 3.5
+      memory: 7.5
+      gpu: 0
+      hpu: 0
+
+    computes:
+    - networkai-inteldev.inteldev-cloud-large
+
+    image: python:3.8
+    language: python3
+
+    # The "arguments" property changes to "params", rest remains the same.
+    # Params in the blueprint yaml can be used to override the arguments in the library.
+    params:
+      - key: train_path
+        type: categorical
+        values:
+          - '/input/train_valid_split/train.csv'
+      - key: valid_path
+        type: categorical
+        values:
+          - '/input/train_valid_split/valid.csv'
+      - key: num_estimators
+        type: discrete
+        values:
+          - '100'
+      - key: positive_label
+        type: categorical
+        values:
+          - '1'
+      - key: negative_label
+        type: categorical
+        values:
+          - '0'
+
+  - title: OCSVM
+    top: 600
+    left: 800
+
+    # Type must be according to the flow task conventions (data, exec, deploy)
+    type: exec
+
+    # The library data
+    library: adts-ocsvm
+    library_version: 1.0.0
+
+    # The flattened library parameters (in this case we have training library)
+    command: python ocsvm.py
+
+    requirements:
+      cpu: 3.5
+      memory: 7.5
+      gpu: 0
+      hpu: 0
+
+    computes:
+    - networkai-inteldev.inteldev-cloud-large
+
+    image: python:3.8
+    language: python3
+
+    # The "arguments" property changes to "params", rest remains the same.
+    # Params in the blueprint yaml can be used to override the arguments in the library.
+    params:
+      - key: train_path
+        type: categorical
+        values:
+          - '/input/train_valid_split/train.csv'
+      - key: valid_path
+        type: categorical
+        values:
+          - '/input/train_valid_split/valid.csv'
+      - key: nu
+        type: discrete
+        values:
+          - '0.2'
+      - key: positive_label
+        type: categorical
+        values:
+          - '1'
+      - key: negative_label
+        type: categorical
+        values:
+          - '0'
+
+  - title: Model Comparison
+    top: 400
+    left: 1100
+
+    # Type must be according to the flow task conventions (data, exec, deploy)
+    type: exec
+
+    # The library data
+    library: adts-compare
+    library_version: 1.0.0
+
+    # The flattened library parameters (in this case we have training library)
+    command: python compare.py
+
+    requirements:
+      cpu: 3.5
+      memory: 7.5
+      gpu: 0
+      hpu: 0
+
+    computes:
+    - networkai-inteldev.inteldev-cloud-large
+
+    image: python:3.8
+    language: python3
+
+    # The "arguments" property changes to "params", rest remains the same.
+    # Params in the blueprint yaml can be used to override the arguments in the library.
+    params: []
+
+    conditions:
+      - target: 0.0
+        task:
+        objective: max
+        tag_key: average_precision_score
+        value: ''
+
+  - title: Inference
+    top: 300
+    left: 1400
+
+    # Type must be according to the flow task conventions (data, exec, deploy)
+    type: deploy
+
+    # The library data
+    library: adts-inference
+    library_version: 1.0.0
+
+    # The flattened library parameters (in this case we have inference library)
+    kind: webservice
+
+    requirements:
+      cpu: 3.5
+      memory: 7.5
+      gpu: 0
+      hpu: 0
+
+    computes:
+    - networkai-inteldev.inteldev-cloud-large
+
+    image: python:3.8
+    language: python3
+    
+    accept_files: false
+    gunicorn_config:
+      - key: workers
+        value: '1'
+    file_name: predict.py # the entrypoint file name
+    function_name: predict # the entrypoint function
+    prep_file: '' # preprocess file name
+    prep_function: '' # preprocess function
+    input_example:
+      vars: ''
+    input_schema:
+      vars: text
+    output_schema: {}
+
+  - title: Batch Predict
+    top: 500
+    left: 1400
+
+    # Type must be according to the flow task conventions (data, exec, deploy)
+    type: exec
+
+    # The library data
+    library: adts-batch-predict
+    library_version: 1.0.0
+
+    # The flattened library parameters (in this case we have training library)
+    command: python batchpredict.py
+
+    requirements:
+      cpu: 3.5
+      memory: 7.5
+      gpu: 0
+      hpu: 0
+
+    computes:
+    - networkai-inteldev.inteldev-cloud-large
+
+    image: python:3.8
+    language: python3
+
+    # The "arguments" property changes to "params", rest remains the same.
+    # Params in the blueprint yaml can be used to override the arguments in the library.
+    params:
+      - key: dataset_path
+        type: categorical
+        values:
+          - '/input/s3_batch_connector/adts_data/new_test.csv'
+
+  - title: S3 Batch Connector
+    top: 600
+    left: 1100
+
+    # Type must be according to the flow task conventions (data, exec, deploy)
+    type: exec
+
+    # The library data
+    library: s3-connector
+    library_version: 1.0.0
+
+    # The flattened library parameters (in this case we have training library)
+    command: python s3-connector.py
+
+    requirements:
+      cpu: 3.5
+      memory: 7.5
+      gpu: 0
+      hpu: 0
+ 
+    computes:
+    - networkai-inteldev.inteldev-cloud-large
+   
+    image: cnvrg:v5.0
+    language: python3
+
+    # The "arguments" property changes to "params", rest remains the same.
+    # Params in the blueprint yaml can be used to override the arguments in the library.
+    params:
+      - key: endpoint
+        type: 'categorical'
+        values:
+          - 'http://s3.amazonaws.com download'
+      - key: bucketname
+        type: 'categorical'
+        values: ['libhub-readme']
+      - key: localdir
+        type: 'categorical'
+        values:
+          - '/cnvrg'
+      - key: prefix
+        type: 'categorical'
+        values: ['adts_data/new_test.csv']
+
+relations:
+  - from: S3 Data Connector
+    to: Preprocessing
+  - from: Preprocessing
+    to: Train-Valid Split
+  - from: Train-Valid Split
+    to: AutoEncoder
+  - from: Train-Valid Split
+    to: KNN
+  - from: Train-Valid Split
+    to: IForest
+  - from: Train-Valid Split
+    to: OCSVM
+  - from: AutoEncoder
+    to: Model Comparison
+  - from: KNN
+    to: Model Comparison
+  - from: IForest
+    to: Model Comparison
+  - from: OCSVM
+    to: Model Comparison
+  - from: Model Comparison
+    to: Inference
+  - from: Model Comparison
+    to: Batch Predict
+  - from: S3 Batch Connector
+    to: Batch Predict

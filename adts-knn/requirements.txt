@@ -1,0 +1,5 @@
+cnvrgv2==1.0.22
+matplotlib==3.5.1
+pandas==1.4.3
+pyod==1.0.3
+scikit-learn==1.1.1

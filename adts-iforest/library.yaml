@@ -1,0 +1,55 @@
+---
+title: ADTS IForest # required on creation, a slug will be generated from the title? -> inference-library
+version: 1.0.0 # required
+description: "Perform anomaly detection on time-series data using iForest" # optional
+icon: python # optional
+
+# Optional properties for creating authors
+author: "cnvrg"
+author_email: "libhub@cnvrg.io"
+
+# At least one tag [inference, training, data] must be present
+tags:
+  - training
+  - Predictive Maintenance
+
+# Available only for training (exec tasks) libraries only
+command: python iforest.py
+
+# These will replace the "compute" argument, values must be >= 0:
+# We need to add requirement for distributed pods
+requirements:
+  cpu: 3.5
+  memory: 7.5
+  gpu: 0
+  hpu: 0
+
+# This will replace the "docker_images" argument (?) need to work in cnvrg as well
+image: python:3.8
+
+# This will replace "env_setup", currently only python 3 is supported.
+language: python3
+
+arguments:
+  # Training arguments will have type and value, valid types are [discrete, float, integer, categorical]
+  # Empty value will mark the argument as 'required', adding a default value will place it in the flow.
+  - key: train_path
+    type: categorical
+    values:
+      - /input/adts_train_valid_split/train.csv
+  - key: valid_path
+    type: categorical
+    values:
+      - /input/adts_train_valid_split/valid.csv
+  - key: num_estimators
+    type: categorical
+    values:
+      - '100'
+  - key: positive_label
+    type: categorical
+    values:
+      - '1'
+  - key: negative_label
+    type: categorical
+    values:
+      - '0'
